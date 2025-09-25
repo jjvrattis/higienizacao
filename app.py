@@ -5,6 +5,7 @@ import base64
 import os
 import datetime
 from io import StringIO
+from io import BytesIO
 
 st.set_page_config(page_title="Processador de Planilhas CAEDU", page_icon="📊", layout="wide")
 
@@ -165,24 +166,30 @@ Arraste e solte seu arquivo CSV para começar.
 st.sidebar.header("Configurações")
 
 # Upload de arquivo
-uploaded_file = st.file_uploader("Arraste e solte seu arquivo CSV aqui", type=['csv'])
+uploaded_file = st.file_uploader("Arraste e solte seu arquivo CSV ou Excel aqui", type=['csv', 'xls', 'xlsx'])
 
 if uploaded_file is not None:
     # Carregar o arquivo
     try:
-        # Tentar diferentes encodings
-        encodings = ['latin-1', 'utf-8', 'cp1252']
         df = None
+        file_extension = uploaded_file.name.split('.')[-1].lower()
         
-        for encoding in encodings:
-            try:
-                df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, low_memory=False)
-                break
-            except UnicodeDecodeError:
-                continue
+        if file_extension in ['xls', 'xlsx']:
+            # Processar arquivo Excel
+            df = pd.read_excel(uploaded_file, engine='openpyxl' if file_extension == 'xlsx' else 'xlrd')
+        else:
+            # Processar arquivo CSV com diferentes encodings
+            encodings = ['latin-1', 'utf-8', 'cp1252']
+            
+            for encoding in encodings:
+                try:
+                    df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, low_memory=False)
+                    break
+                except UnicodeDecodeError:
+                    continue
         
         if df is None:
-            st.error("Não foi possível ler o arquivo. Tente converter para CSV com codificação Latin-1 ou UTF-8.")
+            st.error("Não foi possível ler o arquivo. Verifique o formato ou a codificação.")
         else:
             st.success(f"Arquivo carregado com sucesso! {len(df)} registros encontrados.")
             
